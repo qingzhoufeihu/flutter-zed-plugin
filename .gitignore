@@ -1,0 +1,4 @@
+*.wasm
+/target
+grammars/
+.git.upstream-dart-copy/

@@ -1,0 +1,11 @@
+id = "flutter-tools"
+name = "Flutter Tools"
+description = "Flutter workflow tasks for Dart and Flutter projects in Zed."
+version = "0.1.1"
+schema_version = 1
+authors = ["Jagger <jiangyujian@duck.com>"]
+repository = "https://github.com/jiangyujian/flutter-zed-plugin"
+
+[grammars.dart]
+repository = "https://github.com/UserNobody14/tree-sitter-dart"
+rev = "6922ad29141e819773d6ffb0c6d2c27adefb5acc"

@@ -1,0 +1,69 @@
+[
+  {
+    "label": "Flutter: Run on Android Emulator",
+    "command": "filter='index($0, \"D/FlutterJNI(\") == 1 { next } index($0, \"I/flutter \") == 1 && index($0, \"Using the Impeller rendering backend\") { next } (index($0, \"D/FlutterGeolocator(\") == 1 || index($0, \"D/FlutterRenderer(\") == 1) { next } index($0, \"D/WindowLayoutComponentImpl(\") == 1 { next } index($0, \"V/Configuration(\") == 1 { next } substr($0, 1, 2) == \"I/\" && index($0, \": AssetManager2\") { next } index($0, \"D/InsetsController(\") == 1 { next } index($0, \"I/ImeTracker(\") == 1 { next } index($0, \"D/ProfileInstaller(\") == 1 { next } { print; fflush() }'; run_flutter() { \"$@\" 2>&1 | awk \"$filter\"; return ${pipestatus[1]}; }; android_app_id() { for f in android/app/build.gradle android/app/build.gradle.kts; do [ -f \"$f\" ] || continue; app_id=\"$(sed -nE 's/^[[:space:]]*applicationId[[:space:]]*(=)?[[:space:]]*\"([^\"]+)\".*/\\2/p' \"$f\" | head -n 1)\"; [ -n \"$app_id\" ] && { echo \"$app_id\"; return; }; done; [ -f android/app/src/main/AndroidManifest.xml ] && sed -nE 's/.*package=\"([^\"]+)\".*/\\1/p' android/app/src/main/AndroidManifest.xml | head -n 1; }; uninstall_android_app() { app_id=\"$(android_app_id)\"; if [ -n \"$app_id\" ] && command -v adb >/dev/null 2>&1; then adb -s \"$1\" uninstall \"$app_id\" >/dev/null 2>&1 || true; fi; }; d=\"${ZED_DIRNAME:-$ZED_WORKTREE_ROOT}\"; while [ -n \"$d\" ] && [ \"$d\" != \"/\" ] && [ ! -f \"$d/pubspec.yaml\" ]; do d=\"${d%/*}\"; done; if [ ! -f \"$d/pubspec.yaml\" ]; then echo \"No pubspec.yaml found above ${ZED_DIRNAME:-$ZED_WORKTREE_ROOT}\"; exit 1; fi; cd \"$d\" || exit 1; device=\"$(flutter devices | awk -F '•' 'NF >= 3 && $3 ~ /android/ && device == \"\" { gsub(/^[[:space:]]+|[[:space:]]+$/, \"\", $2); device=$2 } END { print device }')\"; if [ -n \"$device\" ]; then uninstall_android_app \"$device\"; run_flutter flutter run -d \"$device\"; exit $?; fi; id=\"$(flutter emulators | awk '/^[[:space:]]*[^[:space:]].*android[[:space:]]*$/ && id == \"\" { id=$1 } END { print id }')\"; if [ -z \"$id\" ]; then echo \"No Android device is running and no Android emulator was found.\"; run_flutter flutter run; exit $?; fi; echo \"No Android device is running. Launching Android emulator: $id\"; flutter emulators --launch \"$id\"; echo \"Waiting for Android device to appear...\"; for i in 1 2 3 4 5 6 7 8 9 10 11 12; do device=\"$(flutter devices | awk -F '•' 'NF >= 3 && $3 ~ /android/ && device == \"\" { gsub(/^[[:space:]]+|[[:space:]]+$/, \"\", $2); device=$2 } END { print device }')\"; if [ -n \"$device\" ]; then uninstall_android_app \"$device\"; run_flutter flutter run -d \"$device\"; exit $?; fi; sleep 5; done; echo \"Android emulator did not appear within 60 seconds.\"; exit 1",
+    "allow_concurrent_runs": true,
+    "tags": [
+      "flutter-main"
+    ]
+  },
+  {
+    "label": "Flutter: Run on iOS Simulator",
+    "command": "d=\"${ZED_DIRNAME:-$ZED_WORKTREE_ROOT}\"; while [ -n \"$d\" ] && [ \"$d\" != \"/\" ] && [ ! -f \"$d/pubspec.yaml\" ]; do d=\"${d%/*}\"; done; if [ -f \"$d/pubspec.yaml\" ]; then cd \"$d\" && exec flutter run -d ios; else echo \"No pubspec.yaml found above ${ZED_DIRNAME:-$ZED_WORKTREE_ROOT}\"; exit 1; fi",
+    "allow_concurrent_runs": true,
+    "tags": [
+      "flutter-main"
+    ]
+  },
+  {
+    "label": "Flutter: Run on Chrome",
+    "command": "d=\"${ZED_DIRNAME:-$ZED_WORKTREE_ROOT}\"; while [ -n \"$d\" ] && [ \"$d\" != \"/\" ] && [ ! -f \"$d/pubspec.yaml\" ]; do d=\"${d%/*}\"; done; if [ -f \"$d/pubspec.yaml\" ]; then cd \"$d\" && exec flutter run -d chrome; else echo \"No pubspec.yaml found above ${ZED_DIRNAME:-$ZED_WORKTREE_ROOT}\"; exit 1; fi",
+    "allow_concurrent_runs": true,
+    "tags": [
+      "flutter-main"
+    ]
+  },
+  {
+    "label": "Flutter: Run on macOS",
+    "command": "d=\"${ZED_DIRNAME:-$ZED_WORKTREE_ROOT}\"; while [ -n \"$d\" ] && [ \"$d\" != \"/\" ] && [ ! -f \"$d/pubspec.yaml\" ]; do d=\"${d%/*}\"; done; if [ -f \"$d/pubspec.yaml\" ]; then cd \"$d\" && exec flutter run -d macos; else echo \"No pubspec.yaml found above ${ZED_DIRNAME:-$ZED_WORKTREE_ROOT}\"; exit 1; fi",
+    "allow_concurrent_runs": true,
+    "tags": [
+      "flutter-main"
+    ]
+  },
+  {
+    "label": "Flutter: Build APK",
+    "command": "d=\"${ZED_DIRNAME:-$ZED_WORKTREE_ROOT}\"; while [ -n \"$d\" ] && [ \"$d\" != \"/\" ] && [ ! -f \"$d/pubspec.yaml\" ]; do d=\"${d%/*}\"; done; if [ -f \"$d/pubspec.yaml\" ]; then cd \"$d\" && exec flutter build apk --release; else echo \"No pubspec.yaml found above ${ZED_DIRNAME:-$ZED_WORKTREE_ROOT}\"; exit 1; fi",
+    "tags": [
+      "flutter-build"
+    ]
+  },
+  {
+    "label": "Flutter: Build Modern APK",
+    "command": "d=\"${ZED_DIRNAME:-$ZED_WORKTREE_ROOT}\"; while [ -n \"$d\" ] && [ \"$d\" != \"/\" ] && [ ! -f \"$d/pubspec.yaml\" ]; do d=\"${d%/*}\"; done; if [ -f \"$d/pubspec.yaml\" ]; then cd \"$d\" && exec flutter build apk --release --split-per-abi; else echo \"No pubspec.yaml found above ${ZED_DIRNAME:-$ZED_WORKTREE_ROOT}\"; exit 1; fi",
+    "tags": [
+      "flutter-build"
+    ]
+  },
+  {
+    "label": "Flutter: Build App Bundle",
+    "command": "d=\"${ZED_DIRNAME:-$ZED_WORKTREE_ROOT}\"; while [ -n \"$d\" ] && [ \"$d\" != \"/\" ] && [ ! -f \"$d/pubspec.yaml\" ]; do d=\"${d%/*}\"; done; if [ -f \"$d/pubspec.yaml\" ]; then cd \"$d\" && exec flutter build appbundle --release; else echo \"No pubspec.yaml found above ${ZED_DIRNAME:-$ZED_WORKTREE_ROOT}\"; exit 1; fi",
+    "tags": [
+      "flutter-build"
+    ]
+  },
+  {
+    "label": "Flutter: Build iOS (.ipa)",
+    "command": "d=\"${ZED_DIRNAME:-$ZED_WORKTREE_ROOT}\"; while [ -n \"$d\" ] && [ \"$d\" != \"/\" ] && [ ! -f \"$d/pubspec.yaml\" ]; do d=\"${d%/*}\"; done; if [ -f \"$d/pubspec.yaml\" ]; then cd \"$d\" && exec flutter build ipa --release; else echo \"No pubspec.yaml found above ${ZED_DIRNAME:-$ZED_WORKTREE_ROOT}\"; exit 1; fi",
+    "tags": [
+      "flutter-build"
+    ]
+  },
+  {
+    "label": "Flutter: Build Web",
+    "command": "d=\"${ZED_DIRNAME:-$ZED_WORKTREE_ROOT}\"; while [ -n \"$d\" ] && [ \"$d\" != \"/\" ] && [ ! -f \"$d/pubspec.yaml\" ]; do d=\"${d%/*}\"; done; if [ -f \"$d/pubspec.yaml\" ]; then cd \"$d\" && exec flutter build web; else echo \"No pubspec.yaml found above ${ZED_DIRNAME:-$ZED_WORKTREE_ROOT}\"; exit 1; fi",
+    "tags": [
+      "flutter-build"
+    ]
+  }
+]
