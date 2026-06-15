@@ -10,7 +10,9 @@ const filter =
 const helpers =
   filter +
   'android_app_id() { for f in android/app/build.gradle android/app/build.gradle.kts; do [ -f "$f" ] || continue; app_id="$(sed -nE \'s/^[[:space:]]*applicationId[[:space:]]*(=)?[[:space:]]*"([^"]+)".*/\\2/p\' "$f" | head -n 1)"; [ -n "$app_id" ] && { echo "$app_id"; return; }; done; [ -f android/app/src/main/AndroidManifest.xml ] && sed -nE \'s/.*package="([^"]+)".*/\\1/p\' android/app/src/main/AndroidManifest.xml | head -n 1; }; ' +
-  'uninstall_android_app() { app_id="$(android_app_id)"; if [ -n "$app_id" ] && command -v adb >/dev/null 2>&1; then adb -s "$1" uninstall "$app_id" >/dev/null 2>&1 || true; fi; }; ';
+  'uninstall_android_app() { app_id="$(android_app_id)"; if [ -n "$app_id" ] && command -v adb >/dev/null 2>&1; then adb -s "$1" uninstall "$app_id" >/dev/null 2>&1 || true; fi; }; ' +
+  'trim_android_caches() { if command -v adb >/dev/null 2>&1; then adb -s "$1" shell pm trim-caches 999G >/dev/null 2>&1 || true; else echo "adb was not found on PATH, so emulator caches could not be trimmed."; fi; }; ' +
+  'run_flutter_android() { device="$1"; shift; log_file="$(mktemp "${TMPDIR:-/tmp}/zed-flutter-run.XXXXXX")" || { run_flutter "$@"; return $?; }; "$@" 2>&1 | tee "$log_file" | awk "$filter"; run_status=${pipestatus[1]}; if [ "$run_status" -ne 0 ] && grep -q "INSTALL_FAILED_INSUFFICIENT_STORAGE" "$log_file"; then echo "Android emulator reported insufficient storage. Trimming emulator app caches and retrying once..."; trim_android_caches "$device"; uninstall_android_app "$device"; "$@" 2>&1 | tee "$log_file" | awk "$filter"; run_status=${pipestatus[1]}; fi; rm -f "$log_file"; return "$run_status"; }; ';
 
 const projectRoot =
   'd="${ZED_DIRNAME:-$ZED_WORKTREE_ROOT}"; while [ -n "$d" ] && [ "$d" != "/" ] && [ ! -f "$d/pubspec.yaml" ]; do d="${d%/*}"; done; if [ ! -f "$d/pubspec.yaml" ]; then echo "No pubspec.yaml found above ${ZED_DIRNAME:-$ZED_WORKTREE_ROOT}"; exit 1; fi; cd "$d" || exit 1; ';
@@ -40,13 +42,13 @@ function flutterAndroidCommand({ fvm = false, fallbackRunsPlain = true } = {}) {
     helpers +
     projectRoot +
     deviceProbe +
-    `if [ -n "$device" ]; then uninstall_android_app "$device"; run_flutter ${tool} run -d "$device"; exit $?; fi; ` +
+    `if [ -n "$device" ]; then uninstall_android_app "$device"; run_flutter_android "$device" ${tool} run -d "$device"; exit $?; fi; ` +
     emulatorProbe +
     `if [ -z "$id" ]; then echo "No Android device is running and no Android emulator was found."; ${fallback}fi; ` +
     'echo "No Android device is running. Launching Android emulator: $id"; ' +
     launch +
     'echo "Waiting for Android device to appear..."; ' +
-    `for i in 1 2 3 4 5 6 7 8 9 10 11 12; do ${deviceProbe}if [ -n "$device" ]; then uninstall_android_app "$device"; run_flutter ${tool} run -d "$device"; exit $?; fi; sleep 5; done; ` +
+    `for i in 1 2 3 4 5 6 7 8 9 10 11 12; do ${deviceProbe}if [ -n "$device" ]; then uninstall_android_app "$device"; run_flutter_android "$device" ${tool} run -d "$device"; exit $?; fi; sleep 5; done; ` +
     'echo "Android emulator did not appear within 60 seconds."; exit 1'
   );
 }

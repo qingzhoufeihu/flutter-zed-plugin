@@ -72,6 +72,11 @@ first Android emulator returned by `flutter emulators`, waits for it to appear,
 then continues with `flutter run -d <device-id>`. Users do not need to remember
 or type `flutter emulators --launch <id>`.
 
+If Android reports `INSTALL_FAILED_INSUFFICIENT_STORAGE`, the task trims
+emulator app caches and retries the run once. If the retry still fails, wipe the
+emulator data or increase the emulator's internal storage in Android Studio's
+Device Manager.
+
 `Flutter: Build iOS (.ipa)` runs `flutter build ipa --release`, which produces
 the IPA artifact used for TestFlight and App Store upload.
 
